@@ -6,9 +6,9 @@
 #include <SDL2/SDL.h>
 
 struct chip8 {
-    uint8_t keypad[16];
+	uint8_t keypad[16];
 	uint32_t video[64 * 32];
-    uint8_t memory[4096];
+	uint8_t memory[4096];
 	uint8_t registers[16];
 	uint16_t index;
 	uint16_t pc;
