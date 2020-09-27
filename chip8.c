@@ -679,13 +679,29 @@ void cycle(struct chip8* chip) {
 
     if(chip->soundTimer > 0) {
         if(chip->soundTimer == 1) {
-            //Implement sound
+            SDL_PauseAudio(0); // start playing sound
+			SDL_Delay(1000); // wait while sound is playing
+			SDL_PauseAudio(1); // stop playing sound
         }
         --chip->soundTimer;
     }
 }
 
 // Multimedia methods
+
+void audio_callback(void *user_data, Uint8 *raw_buffer, int bytes) {
+	int amplitude = 28000;
+	int sample_rate = 8820;
+
+    Sint16 *buffer = (Sint16*)raw_buffer;
+    int length = bytes / 2; // 2 bytes per sample for AUDIO_S16SYS
+    int sample_nr = *(int*)user_data;
+
+    for(int i = 0; i < length; i++, sample_nr++) {
+        double time = (double)sample_nr / (double)sample_rate;
+        buffer[i] = (Sint16)(amplitude * sin(2.0f * M_PI * 441.0f * time)); // render 441 HZ sine wave
+    }
+}
 
 struct MultimediaLayer* makeMultimediaLayer(char const* title, int windowWidth, int windowHeight, int textureWidth, int textureHeight) {
     struct MultimediaLayer* mult = (struct MultimediaLayer*)malloc(sizeof(struct MultimediaLayer));
@@ -700,6 +716,21 @@ struct MultimediaLayer* makeMultimediaLayer(char const* title, int windowWidth, 
 	mult->renderer = SDL_CreateRenderer(mult->window, -1, SDL_RENDERER_ACCELERATED);
 	mult->texture = SDL_CreateTexture(mult->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, textureWidth, textureHeight);
 
+	//Setting up audio
+    int sample_nr = 0;
+
+    SDL_AudioSpec want;
+    want.freq = 8820; // number of samples per second
+    want.format = AUDIO_S16SYS; // sample type (here: signed short i.e. 16 bit)
+    want.channels = 1; // only one channel
+    want.samples = 2048; // buffer-size 2048
+    want.callback = audio_callback; // function SDL calls periodically to refill the buffer
+    want.userdata = &sample_nr; // counter, keeping track of current sample number
+
+    SDL_AudioSpec have;
+    if(SDL_OpenAudio(&want, &have) != 0) SDL_LogError(SDL_LOG_CATEGORY_AUDIO, "Failed to open audio: %s", SDL_GetError());
+    if(want.format != have.format) SDL_LogError(SDL_LOG_CATEGORY_AUDIO, "Failed to get the desired AudioSpec");
+
     return mult;
 }
 
@@ -707,6 +738,7 @@ void destroyMultimediaLayer(struct MultimediaLayer* mult) {
     SDL_DestroyTexture(mult->texture);
 	SDL_DestroyRenderer(mult->renderer);
 	SDL_DestroyWindow(mult->window);
+	SDL_CloseAudio();
 	SDL_Quit();
 
     free(mult);
