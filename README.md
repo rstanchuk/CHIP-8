@@ -4,7 +4,7 @@ CHIP-8 interpreter implementation in C.
 run `make` command to compile
 
 in order to run:
-`./chip <Scale> <Delay <ROM>`
+`./chip <Scale> <Delay> <ROM>`
 
 ```
 Keyboard     CHIP-8
